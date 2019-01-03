@@ -8,7 +8,7 @@ from scrapy.spiders import CrawlSpider, Rule
 class AppSpider(CrawlSpider):
     name = 'App'
     allowed_domains = ['google.com']
-    start_urls = ['https://play.google.com/store?hl=th']
+    start_urls = ['https://play.google.com/store']
 
     #
     # start_urls = ['https://play.google.com/store/apps',
@@ -17,19 +17,25 @@ class AppSpider(CrawlSpider):
     rules = (
         Rule(LinkExtractor(allow=(r"https://play\.google\.com/store/apps/details",)), callback='parse_item2',
              follow=True),
+        Rule(LinkExtractor(allow=(r"https://play\.google\.com/store/apps/collection/recommended_for_you",)),
+             follow=True),
+        Rule(LinkExtractor(allow=(r"https://play\.google\.com/store/apps/collection/cluster",)),
+             follow=True),
+        Rule(LinkExtractor(allow=(r"https://play\.google\.com/store/apps/dev",)),
+             follow=True),
     )
 
     # 生成泰国版的url
-    def parse_item1(self, response):
-        # i = {}
-        # i['domain_id'] = response.xpath('//input[@id="sid"]/@value').extract()
-        # i['name'] = response.xpath('//div[@id="name"]').extract()
-        # i['description'] = response.xpath('//div[@id="description"]').extract()
-        real_url = response.url + "&hl=th"
-        yield scrapy.Request(
-            url=real_url,
-            callback=self.parse_item2
-        )
+    # def parse_item1(self, response):
+    #     # i = {}
+    #     # i['domain_id'] = response.xpath('//input[@id="sid"]/@value').extract()
+    #     # i['name'] = response.xpath('//div[@id="name"]').extract()
+    #     # i['description'] = response.xpath('//div[@id="description"]').extract()
+    #     real_url = response.url + "&hl=th"
+    #     yield scrapy.Request(
+    #         url=real_url,
+    #         callback=self.parse_item2
+    #     )
 
     # 详情页信息提取
     def parse_item2(self, response):
@@ -39,7 +45,7 @@ class AppSpider(CrawlSpider):
         # "https://play.google.com/store/apps/details?id=com.google.android.youtube&hl=th"
         # print(response.url)
         # print(re.findall(r"\?id=(.*)", response.url))
-        print(response.url)
+        # print(response.url)
         item["App包名"] = re.findall(r"\?id=(.*?)&", response.url)[0]
         # item["App包名"] = re.findall(r"\?id=(.*)", response.url)[0]
         # print(response.url)

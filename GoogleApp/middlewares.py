@@ -77,8 +77,6 @@ class GoogleAppChangeAreaDownloaderMiddleware(object):
             browser.quit()
             return response
         else:
-            new_url = request.url + "&hl=th"
-            request._set_url(new_url)
             return None
 
 
