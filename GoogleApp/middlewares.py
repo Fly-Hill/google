@@ -10,64 +10,82 @@ from scrapy import signals
 import random
 from scrapy.http.response.html import HtmlResponse
 from selenium import webdriver
+from GoogleApp.settings import IS_DEVELOPMENT
+from scrapy_redis import picklecompat
+from scrapy.utils.reqser import request_to_dict
+import redis
+# from urllib.parse import unquote
 
-user_agent_list = [
-    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 "
-    "(KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
-    "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 "
-    "(KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
-    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 "
-    "(KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
-    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 "
-    "(KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
-    "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 "
-    "(KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/536.5 "
-    "(KHTML, like Gecko) Chrome/19.0.1084.9 Safari/536.5",
-    "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.5 "
-    "(KHTML, like Gecko) Chrome/19.0.1084.36 Safari/536.5",
-    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
-    "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
-    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
-    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
-    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
-    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
-    "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
-    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 "
-    "(KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 "
-    "(KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
-    "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 "
-    "(KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
-]
+
+from twisted.internet import defer
+from twisted.internet.error import TimeoutError, DNSLookupError, \
+    ConnectionRefusedError, ConnectionDone, ConnectError, \
+    ConnectionLost, TCPTimedOutError
+from twisted.web.client import ResponseFailed
+from scrapy.core.downloader.handlers.http11 import TunnelError
+
+
+class ProcessAllExceptionMiddleware(object):
+    ALL_EXCEPTIONS = (defer.TimeoutError, TimeoutError, DNSLookupError,
+                      ConnectionRefusedError, ConnectionDone, ConnectError,
+                      ConnectionLost, TCPTimedOutError, ResponseFailed,
+                      IOError, TunnelError)
+
+    # def process_response(self, request, response, spider):
+    #     # 捕获状态码为40x/50x的response
+    #     if str(response.status).startswith('4') or str(response.status).startswith('5'):
+    #         # 随意封装，直接返回response，spider代码中根据url==''来处理response
+    #         response = HtmlResponse(url='')
+    #         return response
+    #     # 其他状态码不处理
+    #     return response
+
+    def process_exception(self, request, exception, spider):
+        # 捕获几乎所有的异常
+        if isinstance(exception, self.ALL_EXCEPTIONS):
+            # 在日志中打印异常类型
+            print('Got exception: %s' % (exception))
+            # 随意封装一个response，返回给spider
+            
+            
+            # obj = request_to_dict(request, spider)
+            # serializer = picklecompat
+            # value = serializer.dumps(obj)
+            #
+            # r = redis.Redis(host='127.0.0.1', port=6379, db=0, password=123456, decode_responses=True)
+            # point = random.randint(1, 10000000)
+            # r.zadd("App_en:requests", {value: point})
+            # #time.sleep(30)
+            # #print("网络错误sleep...")
+            # spider.crawler.engine.close_spider(spider, '网络错误关闭爬虫')
+            response = HtmlResponse(url='exception')
+            return response
+        # 打印出未捕获到的异常
+        print('not contained exception: %s' % exception)
 
 
 class GoogleAppChangeAreaDownloaderMiddleware(object):
     def process_request(self, request, spider):
-        if request.url == 'https://play.google.com/store?hl=th':
-            print("first")
-            options = webdriver.ChromeOptions()
-            # options.add_argument("--headless")
-            # options.add_argument("--disable-gpu")
-            browser = webdriver.Chrome(r"C:\Users\hp\Downloads\安装包\chromedriver.exe", options=options)
+        if "https://play.google.com/store/apps?" in request.url:
+            # return None
+            # print("first")
+            if IS_DEVELOPMENT:
+                options = webdriver.ChromeOptions()
+                options.add_argument("--headless")
+                options.add_argument("--disable-gpu")
+                browser = webdriver.Chrome(r"C:\Users\hp\Downloads\安装包\chromedriver.exe", options=options)
+            else:
+                browser = webdriver.PhantomJS()
             browser.get(request.url)
             for i in range(4):
-                time.sleep(3)
+                time.sleep(5)
                 # 将滚动条移动到页面的顶部
                 js = "var q=document.documentElement.scrollTop=0"
                 browser.execute_script(js)
                 # 将滚动条移动到页面的底部
                 js = "var q=document.documentElement.scrollTop=100000"
                 browser.execute_script(js)
+            time.sleep(6)
             response = HtmlResponse(
                 browser.current_url,
                 status=200,
@@ -75,7 +93,15 @@ class GoogleAppChangeAreaDownloaderMiddleware(object):
                 encoding="utf-8",
                 request=request)
             browser.quit()
+            # print("end")
             return response
+        elif "https://play.google.com/store/apps/details" in request.url:
+            if spider.country_code:
+                code = "&hl={}".format(spider.country_code)
+                # url = unquote(request.url, 'utf-8')
+                new_url = request.url + code
+                request._set_url(new_url)
+            return None
         else:
             return None
 
@@ -83,8 +109,24 @@ class GoogleAppChangeAreaDownloaderMiddleware(object):
 class GoogleAppRandomUserAgentDownloaderMiddleware(object):
     def process_request(self, request, spider):
         # print("RandomUserAgentMiddleware")
-        request.headers["User_Agent"] = random.choice(user_agent_list)
+        request.headers["User_Agent"] = self.get_ua()
         return None
+
+    @staticmethod
+    def get_ua():
+        first_num = random.randint(55, 62)
+        third_num = random.randint(0, 3200)
+        fourth_num = random.randint(0, 140)
+        os_type = [
+            '(Windows NT 6.1; WOW64)', '(Windows NT 10.0; WOW64)', '(X11; Linux x86_64)',
+            '(Macintosh; Intel Mac OS X 10_12_6)'
+        ]
+        chrome_version = 'Chrome/{}.0.{}.{}'.format(first_num, third_num, fourth_num)
+
+        ua = ' '.join(['Mozilla/5.0', random.choice(os_type), 'AppleWebKit/537.36',
+                       '(KHTML, like Gecko)', chrome_version, 'Safari/537.36']
+                      )
+        return ua
 
 
 class GetFailedUrlMiddleware(object):
